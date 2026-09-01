@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Melāp | Find new friends near you</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <div class="brand">
+        <span class="brand-mark">ਮ</span>
+        <span class="brand-name">Melāp</span>
+      </div>
+      <nav class="nav-links">
+        <a href="#discover">Discover</a>
+        <a href="#events">Events</a>
+        <a href="#community">Community</a>
+        <a href="#pricing">Pricing</a>
+      </nav>
+      <div class="nav-actions">
+        <select class="language-select" aria-label="Select language">
+          <option value="en">English</option>
+          <option value="it" selected>Italiano</option>
+          <option value="hi">हिन्दी</option>
+          <option value="pa">ਪੰਜਾਬੀ</option>
+        </select>
+        <button class="btn btn-secondary" type="button" data-login-open>Login</button>
+        <button class="btn btn-primary" type="button" data-signup-open>Sign up</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-copy">
+          <span class="eyebrow">Meet real people near you</span>
+          <h1>Find new friends around you and make unforgettable memories together.</h1>
+          <p>Join local meetups, spontaneous outings, and events around your city. Discover people with similar interests and enjoy easy, meaningful connections.</p>
+          <div class="city-picker-wrap">
+            <label for="citySelect">Your location</label>
+            <select id="citySelect" aria-label="Select your location">
+              <option value="Milan">Milan</option>
+              <option value="Turin">Turin</option>
+              <option value="Bologna">Bologna</option>
+              <option value="Rome">Rome</option>
+              <option value="Florence">Florence</option>
+              <option value="Barcelona">Barcelona</option>
+              <option value="Lisbon">Lisbon</option>
+              <option value="Madrid">Madrid</option>
+            </select>
+          </div>
+          <div class="hero-actions">
+            <button class="btn btn-primary" type="button" id="findNearMeBtn">Find near me</button>
+            <button class="btn btn-ghost" type="button" id="howItWorksBtn">How it works</button>
+          </div>
+          <ul class="trust-list">
+            <li><strong>18k+</strong><span>active users</span></li>
+            <li><strong>430</strong><span>events/month</span></li>
+            <li><strong>4.9/5</strong><span>rating</span></li>
+          </ul>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="visual-card">
+            <div class="avatar">G</div>
+            <div class="visual-info">
+              <strong>Gurpreet, 27</strong>
+              <p>Love for morning walks &amp; brunch</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="discover" id="discover">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="section-eyebrow">Search by interest</span>
+            <h2>Meet people who match your vibe in your neighbourhood.</h2>
+          </div>
+        </div>
+        <div class="filters">
+          <button class="filter-btn active" type="button" data-filter="all">All</button>
+          <button class="filter-btn" type="button" data-filter="fitness">Fitness</button>
+          <button class="filter-btn" type="button" data-filter="food">Food</button>
+          <button class="filter-btn" type="button" data-filter="music">Music</button>
+          <button class="filter-btn" type="button" data-filter="nature">Nature</button>
+          <button class="filter-btn" type="button" data-filter="night">Night out</button>
+        </div>
+
+        <div id="premiumGate" class="premium-gate hidden">
+          <div class="premium-gate-inner">
+            <h3 id="premiumGateTitle">Unlock nearby friends</h3>
+            <p id="premiumGateText">Upgrade to Premium to see who's nearby and connect with them.</p>
+            <button class="btn btn-primary" type="button" data-open-pricing>See Premium plans</button>
+          </div>
+        </div>
+
+        <div id="profiles" class="container profiles-grid"></div>
+      </div>
+    </section>
+
+    <section class="pricing" id="pricing">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="section-eyebrow">Membership</span>
+            <h2>Free to join. Premium unlocks who's nearby.</h2>
+          </div>
+        </div>
+        <p class="pricing-note">Registration is always free for everyone. To view and connect with people nearby, activate Premium.</p>
+        <div class="pricing-grid">
+          <article class="pricing-card">
+            <span class="pricing-tag">Everyone</span>
+            <h3>Free account</h3>
+            <p class="price">€0</p>
+            <ul>
+              <li>Create your profile</li>
+              <li>Browse events</li>
+              <li>Join the community</li>
+            </ul>
+            <button class="btn btn-ghost" type="button" data-signup-open>Create free profile</button>
+          </article>
+
+          <article class="pricing-card highlight" data-plan="men">
+            <span class="pricing-tag">Men</span>
+            <h3>Premium for men</h3>
+            <p class="price">€4.99<span>/month</span></p>
+            <p class="price-alt">or €29.99/year</p>
+            <ul>
+              <li>See who's nearby</li>
+              <li>Send connection requests</li>
+              <li>Unlock mutual-confirmation chat</li>
+            </ul>
+            <button class="btn btn-primary" type="button" data-upgrade="men-monthly">Get monthly – €4.99</button>
+            <button class="btn btn-secondary" type="button" data-upgrade="men-yearly">Get yearly – €29.99</button>
+          </article>
+
+          <article class="pricing-card highlight" data-plan="women">
+            <span class="pricing-tag">Women</span>
+            <h3>Premium for women</h3>
+            <p class="price">Free<span>/ 1 year</span></p>
+            <p class="price-alt">Automatically applied</p>
+            <ul>
+              <li>See who's nearby</li>
+              <li>Send connection requests</li>
+              <li>Unlock mutual-confirmation chat</li>
+            </ul>
+            <button class="btn btn-primary" type="button" data-upgrade="women-free">Activate free year</button>
+          </article>
+        </div>
+        <p id="premiumStatus" class="premium-status" aria-live="polite"></p>
+
+        <div id="subscriptionManager" class="subscription-manager hidden">
+          <h3>Your subscription</h3>
+          <p id="subscriptionPlanLabel"></p>
+          <p id="subscriptionCancelNotice" class="subscription-cancel-notice hidden"></p>
+          <button class="btn btn-ghost" type="button" id="cancelSubscriptionBtn">Cancel subscription from next month</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="events" id="events">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="section-eyebrow">Featured</span>
+            <h2>Weekend events and hangouts</h2>
+          </div>
+        </div>
+        <div class="container event-list">
+          <article class="event-card">
+            <span class="event-tag">Fitness</span>
+            <h3>Morning Run &amp; Chai</h3>
+            <p>Join a quick run, stretch together, and enjoy chai with new friends nearby.</p>
+            <div class="event-meta"><span>Saturday, 9:30</span><span>20 people</span></div>
+          </article>
+          <article class="event-card">
+            <span class="event-tag">Food</span>
+            <h3>Street Food Walk</h3>
+            <p>Explore local food stalls, try Punjabi favourites, and meet people over snacks.</p>
+            <div class="event-meta"><span>Sunday, 18:00</span><span>16 people</span></div>
+          </article>
+          <article class="event-card">
+            <span class="event-tag">Music</span>
+            <h3>Live Jam Night</h3>
+            <p>Meet music lovers, sing along, and enjoy an easygoing evening with your city crew.</p>
+            <div class="event-meta"><span>Friday, 20:30</span><span>24 people</span></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="community" id="community">
+      <div class="container community-grid">
+        <div class="community-copy">
+          <span class="section-eyebrow">How it works</span>
+          <h2>We bring you people near you who share your energy and interests.</h2>
+          <ul>
+            <li>Create your profile with your hobbies and availability.</li>
+            <li>Browse local events and send quick requests to join.</li>
+            <li>Plan simple, natural meetups that feel safe and fun.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="container cta-box-main">
+        <div>
+          <span class="section-eyebrow">Try for free</span>
+          <h2>Start meeting new people in your city today.</h2>
+        </div>
+        <button class="btn btn-primary" type="button" data-signup-open>Create your profile</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="signup-modal hidden" id="signupModal">
+    <div class="signup-modal-backdrop" data-close-signup></div>
+    <div class="signup-panel" role="dialog" aria-modal="true" aria-labelledby="signupTitle">
+      <button class="modal-close" type="button" aria-label="Close signup modal">&times;</button>
+      <span class="eyebrow">Join Melāp</span>
+      <h3 id="signupTitle">Create your profile</h3>
+      <form id="signupForm">
+        <label>
+          Full name
+          <input type="text" name="fullName" placeholder="Your name" required>
+        </label>
+        <label>
+          Email
+          <input type="email" name="email" placeholder="you@example.com" required>
+        </label>
+        <label>
+          City
+          <select name="city" required>
+            <option value="Milan">Milan</option>
+            <option value="Turin">Turin</option>
+            <option value="Bologna">Bologna</option>
+            <option value="Rome">Rome</option>
+            <option value="Florence">Florence</option>
+            <option value="Barcelona">Barcelona</option>
+            <option value="Lisbon">Lisbon</option>
+            <option value="Madrid">Madrid</option>
+          </select>
+        </label>
+        <label>
+          Gender
+          <select name="genderIdentity" required>
+            <option value="">Select</option>
+            <option value="Woman">Woman</option>
+            <option value="Man">Man</option>
+          </select>
+        </label>
+        <label class="consent-check">
+          <input type="checkbox" name="privacyConsent" required>
+          <span>I am 18+ and I accept the <a href="#" data-open-privacy>Privacy Policy</a> and Terms of Service, and consent to processing of my personal data under the GDPR.</span>
+        </label>
+        <button class="btn btn-primary" type="submit">Join now</button>
+        <p class="signup-status" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+  <div class="signup-modal hidden" id="loginModal">
+    <div class="signup-modal-backdrop" data-close-login></div>
+    <div class="signup-panel" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <button class="modal-close" type="button" aria-label="Close login modal">&times;</button>
+      <span class="eyebrow">Welcome back</span>
+      <h3 id="loginTitle">Log in with OTP</h3>
+      <form id="loginForm">
+        <label>
+          Email
+          <input type="email" name="loginEmail" placeholder="you@example.com" required>
+        </label>
+        <button class="btn btn-secondary btn-block" type="button" id="sendOtpBtn">Send OTP</button>
+        <label>
+          One-time password
+          <input type="text" name="otpCode" placeholder="Enter 6-digit code">
+        </label>
+        <button class="btn btn-primary" type="submit">Verify &amp; access</button>
+        <p class="login-status" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+  <section class="melap-connection-box" id="melapConnectionBox">
+    <h3>Connection requests</h3>
+    <div class="melap-requests"></div>
+    <div id="melapChatPanel" class="melap-chat-panel">
+      <div class="melap-chat-header">Chat unlocked after mutual confirmation</div>
+      <div class="melap-message-log">
+        <div class="melap-message them">Both users must confirm before messaging is available.</div>
+      </div>
+      <div class="melap-composer">
+        <input type="text" placeholder="Message opens only after both confirm" disabled>
+        <button type="button" class="melap-send-btn" disabled>Send</button>
+      </div>
+      <p id="melapPhoneRuleNotice" class="melap-phone-notice">Phone numbers are not allowed in messages.</p>
+    </div>
+  </section>
+
+  <div class="signup-modal hidden" id="privacyModal">
+    <div class="signup-modal-backdrop" data-close-privacy></div>
+    <div class="signup-panel privacy-panel" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+      <button class="modal-close" type="button" aria-label="Close privacy modal">&times;</button>
+      <span class="eyebrow">Your data, your rights</span>
+      <h3 id="privacyTitle">Privacy Policy &amp; GDPR</h3>
+      <div class="privacy-body">
+        <p>Melāp processes your personal data (name, email, city, gender) in accordance with the EU General Data Protection Regulation (GDPR).</p>
+        <ul>
+          <li>We only use your data to run your profile, matches and events.</li>
+          <li>You can request access, correction, or deletion of your data at any time.</li>
+          <li>You can withdraw consent and close your account whenever you want.</li>
+          <li>We do not sell your personal data to third parties.</li>
+          <li>Data is stored securely and only for as long as necessary.</li>
+        </ul>
+        <p>For any request, contact our Data Protection team at <a href="mailto:privacy@melap.app">privacy@melap.app</a>.</p>
+      </div>
+      <button class="btn btn-primary" type="button" data-close-privacy>Close</button>
+    </div>
+  </div>
+
+  <div id="cookieConsentBanner" class="cookie-consent hidden">
+    <p>We use cookies and process personal data in line with the GDPR to run Melāp and improve your experience. <a href="#" data-open-privacy>Learn more</a>.</p>
+    <div class="cookie-consent-actions">
+      <button class="btn btn-ghost" type="button" id="cookieRejectBtn">Reject non-essential</button>
+      <button class="btn btn-primary" type="button" id="cookieAcceptBtn">Accept all</button>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="brand">
+        <span class="brand-mark">ਮ</span>
+        <span class="brand-name">Melāp</span>
+      </div>
+      <p>&copy; 2026 Melāp. Connect with your local community. <a href="#" data-open-privacy>Privacy Policy</a></p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
