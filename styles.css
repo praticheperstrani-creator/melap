@@ -238,6 +238,15 @@ body {
   padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); font: inherit;
 }
 .signup-status, .login-status { color: var(--brand-2); font-weight: 600; min-height: 20px; }
+.checkout-summary {
+  margin: -6px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #cfe2ff;
+  border-radius: 10px;
+  background: #f4f9ff;
+  color: var(--ink);
+  font-weight: 700;
+}
 
 .consent-check {
   flex-direction: row !important;

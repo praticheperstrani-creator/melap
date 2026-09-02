@@ -324,6 +324,37 @@
     </div>
   </div>
 
+  
+    <div class="signup-modal hidden" id="checkoutModal">
+      <div class="signup-modal-backdrop" data-close-checkout></div>
+      <div class="signup-panel checkout-panel" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
+        <button class="modal-close" type="button" aria-label="Close checkout modal">&times;</button>
+        <span class="eyebrow">Secure checkout</span>
+        <h3 id="checkoutTitle">Complete your Premium subscription</h3>
+        <p id="checkoutPlanSummary" class="checkout-summary"></p>
+        <form id="checkoutForm">
+          <label>
+            Payment method
+            <select name="paymentMethod" required>
+              <option value="card">Credit or debit card</option>
+              <option value="apple-pay">Apple Pay</option>
+              <option value="google-pay">Google Pay</option>
+              <option value="sepa">SEPA Direct Debit</option>
+            </select>
+          </label>
+          <label>
+            Billing email
+            <input type="email" name="billingEmail" placeholder="you@example.com" required>
+          </label>
+          <label class="consent-check">
+            <input type="checkbox" name="recurringConsent" required>
+            <span>I understand this subscription renews automatically until I cancel it. I can cancel renewal at any time from my subscription settings.</span>
+          </label>
+          <button class="btn btn-primary" type="submit" id="checkoutSubmitBtn">Pay securely</button>
+          <p id="checkoutStatus" class="signup-status" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
   <div id="cookieConsentBanner" class="cookie-consent hidden">
     <p>We use cookies and process personal data in line with the GDPR to run Melāp and improve your experience. <a href="#" data-open-privacy>Learn more</a>.</p>
     <div class="cookie-consent-actions">
@@ -342,6 +373,6 @@
     </div>
   </footer>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=7"></script>
 </body>
 </html>
