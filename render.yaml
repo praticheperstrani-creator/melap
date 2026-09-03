@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: melap
+    env: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    envVars:
+      - key: MELAP_ENV
+        value: production
+      - key: MELAP_DATABASE_PATH
+        value: /data/melap.db
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+    disk:
+      name: melap-data
+      mountPath: /data
+      sizeGB: 1
