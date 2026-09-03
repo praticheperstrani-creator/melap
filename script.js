@@ -318,19 +318,14 @@ if (checkoutForm) {
   checkoutForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!selectedCheckoutPlan) return;
-    const formData = new FormData(checkoutForm);
-    const email = formData.get('billingEmail');
-    const method = formData.get('paymentMethod');
     const status = document.getElementById('checkoutStatus');
     try {
-      await apiRequest('/api/subscriptions', {
+      const result = await apiRequest('/api/checkout/create-session', {
         method: 'POST',
         body: JSON.stringify({ plan: selectedCheckoutPlan })
       });
-      activatePremiumPlan(selectedCheckoutPlan);
-      if (status) status.textContent = `Payment confirmed with ${method}. A receipt was sent to ${email}.`;
-      selectedCheckoutPlan = null;
-      closeModal(checkoutModal);
+      if (status) status.textContent = 'Redirecting to secure Stripe checkout...';
+      window.location.href = result.url;
     } catch (error) {
       if (status) status.textContent = error.message === 'Authentication required.'
         ? 'Log in with OTP before activating Premium.'
@@ -338,6 +333,32 @@ if (checkoutForm) {
     }
   });
 }
+
+// ---- Resume Stripe Checkout after redirect back from Stripe ----
+async function confirmStripeCheckoutFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const checkoutResult = params.get('checkout');
+  const sessionId = params.get('session_id');
+  if (checkoutResult !== 'success' || !sessionId || !state.token) return;
+
+  try {
+    const result = await apiRequest('/api/checkout/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId })
+    });
+    activatePremiumPlan(result.plan);
+    setPremiumStatus('Payment confirmed with Stripe. Premium is now active.');
+  } catch (error) {
+    setPremiumStatus(error.message);
+  } finally {
+    params.delete('checkout');
+    params.delete('session_id');
+    const cleanQuery = params.toString();
+    window.history.replaceState({}, document.title, window.location.pathname + (cleanQuery ? `?${cleanQuery}` : ''));
+  }
+}
+
+confirmStripeCheckoutFromUrl();
 
 const signupForm = document.getElementById('signupForm');
 if (signupForm) {

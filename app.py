@@ -5,11 +5,25 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import stripe
 from flask import Flask, g, jsonify, request, send_from_directory
 
 BASE_DIR = Path(__file__).resolve().parent
-DATABASE = BASE_DIR / "melap.db"
+DATABASE = Path(os.environ.get("MELAP_DATABASE_PATH", BASE_DIR / "melap.db"))
 OTP_TTL_MINUTES = 10
+IS_PRODUCTION = os.environ.get("MELAP_ENV", "development") == "production"
+
+# Stripe keys are read only from environment variables. Never hardcode them here.
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+stripe.api_key = STRIPE_SECRET_KEY
+
+# Plan pricing used to build Stripe Checkout line items on the fly (no dashboard Price IDs needed).
+STRIPE_PLAN_CONFIG = {
+    "men-monthly": {"amount": 499, "currency": "eur", "interval": "month", "label": "Melāp Premium - Monthly"},
+    "men-yearly": {"amount": 2999, "currency": "eur", "interval": "year", "label": "Melāp Premium - Yearly"},
+}
 
 app = Flask(__name__, static_folder=None)
 
@@ -67,6 +81,8 @@ def init_db():
             plan TEXT NOT NULL CHECK(plan IN ('men-monthly', 'men-yearly', 'women-free')),
             status TEXT NOT NULL CHECK(status IN ('active', 'cancel-at-period-end')),
             current_period_end TEXT NOT NULL,
+            stripe_customer_id TEXT,
+            stripe_subscription_id TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
@@ -88,6 +104,11 @@ def init_db():
         );
         """
     )
+    existing_columns = {row[1] for row in db.execute("PRAGMA table_info(subscriptions)").fetchall()}
+    if "stripe_customer_id" not in existing_columns:
+        db.execute("ALTER TABLE subscriptions ADD COLUMN stripe_customer_id TEXT")
+    if "stripe_subscription_id" not in existing_columns:
+        db.execute("ALTER TABLE subscriptions ADD COLUMN stripe_subscription_id TEXT")
     db.commit()
     db.close()
 
@@ -242,7 +263,7 @@ def request_otp():
     )
     db.commit()
     response = {"message": "OTP created. In production, it is sent by email.", "expiresInMinutes": OTP_TTL_MINUTES}
-    if app.config["DEBUG"]:
+    if not IS_PRODUCTION:
         response["developmentCode"] = code
     return jsonify(response)
 
@@ -399,6 +420,8 @@ def send_message():
 
 @app.post("/api/subscriptions")
 def activate_subscription():
+    # Dev-only fallback that skips Stripe entirely. Real payments go through
+    # /api/checkout/create-session below. Kept so the UI still works before Stripe keys are set.
     user, error = require_user()
     if error:
         return error
@@ -429,16 +452,149 @@ def cancel_subscription():
     if error:
         return error
     db = get_db()
-    result = db.execute(
+    row = db.execute(
+        "SELECT stripe_subscription_id FROM subscriptions WHERE user_id = ? AND status = 'active'",
+        (user["id"],),
+    ).fetchone()
+    if row is None:
+        return json_error("No active subscription found.", 404)
+
+    if row["stripe_subscription_id"] and STRIPE_SECRET_KEY:
+        try:
+            stripe.Subscription.modify(row["stripe_subscription_id"], cancel_at_period_end=True)
+        except stripe.error.StripeError as exc:
+            return json_error(f"Stripe error: {exc.user_message or str(exc)}", 502)
+
+    db.execute(
         "UPDATE subscriptions SET status = 'cancel-at-period-end', updated_at = ? WHERE user_id = ? AND status = 'active'",
         (utc_now().isoformat(), user["id"]),
     )
-    if result.rowcount == 0:
-        return json_error("No active subscription found.", 404)
     db.commit()
     return jsonify({"status": "cancel-at-period-end"})
 
 
+@app.get("/api/config")
+def public_config():
+    return jsonify({"stripePublishableKey": STRIPE_PUBLISHABLE_KEY, "stripeConfigured": bool(STRIPE_SECRET_KEY)})
+
+
+@app.post("/api/checkout/create-session")
+def create_checkout_session():
+    user, error = require_user()
+    if error:
+        return error
+    if not STRIPE_SECRET_KEY:
+        return json_error("Stripe is not configured on the server yet.", 503)
+
+    data = require_json()
+    plan = data.get("plan") if data else ""
+    plan_config = STRIPE_PLAN_CONFIG.get(plan)
+    if user["gender"] != "Man" or plan_config is None:
+        return json_error("This plan is unavailable.", 400)
+
+    origin = request.headers.get("Origin") or request.host_url.rstrip("/")
+    try:
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            customer_email=user["email"],
+            line_items=[{
+                "price_data": {
+                    "currency": plan_config["currency"],
+                    "unit_amount": plan_config["amount"],
+                    "recurring": {"interval": plan_config["interval"]},
+                    "product_data": {"name": plan_config["label"]},
+                },
+                "quantity": 1,
+            }],
+            metadata={"user_id": str(user["id"]), "plan": plan},
+            subscription_data={"metadata": {"user_id": str(user["id"]), "plan": plan}},
+            success_url=f"{origin}/?checkout=success&session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{origin}/?checkout=cancelled",
+        )
+    except stripe.error.StripeError as exc:
+        return json_error(f"Stripe error: {exc.user_message or str(exc)}", 502)
+
+    return jsonify({"url": session.url})
+
+
+@app.post("/api/checkout/confirm")
+def confirm_checkout_session():
+    user, error = require_user()
+    if error:
+        return error
+    if not STRIPE_SECRET_KEY:
+        return json_error("Stripe is not configured on the server yet.", 503)
+
+    data = require_json()
+    session_id = data.get("sessionId") if data else ""
+    if not session_id:
+        return json_error("A Stripe session id is required.")
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id, expand=["subscription"])
+    except stripe.error.StripeError as exc:
+        return json_error(f"Stripe error: {exc.user_message or str(exc)}", 502)
+
+    if str(session.metadata.get("user_id")) != str(user["id"]):
+        return json_error("This checkout session does not belong to your account.", 403)
+    if session.payment_status != "paid":
+        return json_error("Payment has not completed yet.", 402)
+
+    plan = session.metadata.get("plan")
+    subscription = session.subscription
+    period_end = (
+        datetime.fromtimestamp(subscription["current_period_end"], tz=timezone.utc)
+        if subscription else utc_now() + timedelta(days=31)
+    )
+    now = utc_now().isoformat()
+    db = get_db()
+    db.execute(
+        """
+        INSERT INTO subscriptions (user_id, plan, status, current_period_end, stripe_customer_id, stripe_subscription_id, created_at, updated_at)
+        VALUES (?, ?, 'active', ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+          plan = excluded.plan, status = 'active', current_period_end = excluded.current_period_end,
+          stripe_customer_id = excluded.stripe_customer_id, stripe_subscription_id = excluded.stripe_subscription_id,
+          updated_at = excluded.updated_at
+        """,
+        (user["id"], plan, period_end.isoformat(), session.customer, subscription["id"] if subscription else None, now, now),
+    )
+    db.commit()
+    return jsonify({"plan": plan, "status": "active"})
+
+
+@app.post("/api/stripe/webhook")
+def stripe_webhook():
+    # Optional: only needed once Melāp is deployed with a public URL and STRIPE_WEBHOOK_SECRET is set.
+    payload = request.data
+    signature = request.headers.get("Stripe-Signature", "")
+    if not STRIPE_WEBHOOK_SECRET:
+        return json_error("Webhook secret is not configured.", 503)
+    try:
+        event = stripe.Webhook.construct_event(payload, signature, STRIPE_WEBHOOK_SECRET)
+    except (ValueError, stripe.error.SignatureVerificationError):
+        return json_error("Invalid webhook signature.", 400)
+
+    if event["type"] == "customer.subscription.deleted":
+        subscription = event["data"]["object"]
+        db = get_db()
+        db.execute(
+            "UPDATE subscriptions SET status = 'cancel-at-period-end', updated_at = ? WHERE stripe_subscription_id = ?",
+            (utc_now().isoformat(), subscription["id"]),
+        )
+        db.commit()
+
+    return jsonify({"received": True})
+
+
+init_db()
+
 if __name__ == "__main__":
-    init_db()
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    # Local development only. In production, run with a WSGI server, e.g.:
+    #   gunicorn --bind 0.0.0.0:$PORT app:app
+    #   waitress-serve --listen=0.0.0.0:$PORT app:app
+    app.run(
+        host=os.environ.get("MELAP_HOST", "127.0.0.1"),
+        port=int(os.environ.get("PORT", 5000)),
+        debug=not IS_PRODUCTION,
+    )
