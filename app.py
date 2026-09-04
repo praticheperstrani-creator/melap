@@ -4,6 +4,9 @@ import secrets
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib import request as url_request
+from urllib.error import HTTPError, URLError
+import json
 
 import stripe
 from flask import Flask, g, jsonify, request, send_from_directory
@@ -17,6 +20,8 @@ IS_PRODUCTION = os.environ.get("MELAP_ENV", "development") == "production"
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "Melāp <noreply@melap.it>")
 stripe.api_key = STRIPE_SECRET_KEY
 
 # Plan pricing used to build Stripe Checkout line items on the fly (no dashboard Price IDs needed).
@@ -126,6 +131,38 @@ def require_json():
 
 def hash_otp(code):
     return hashlib.sha256(code.encode("utf-8")).hexdigest()
+
+
+def send_otp_email(email, code):
+    if not RESEND_API_KEY:
+        return False, "Email OTP is not configured on the server."
+
+    payload = json.dumps({
+        "from": RESEND_FROM_EMAIL,
+        "to": [email],
+        "subject": "Il tuo codice OTP Melāp",
+        "html": (
+            f"<p>Il tuo codice per accedere a Melāp è:</p>"
+            f"<p style='font-size:28px;font-weight:bold;letter-spacing:6px'>{code}</p>"
+            f"<p>Il codice scade tra {OTP_TTL_MINUTES} minuti. Se non hai richiesto l'accesso, ignora questa email.</p>"
+        ),
+    }).encode("utf-8")
+    http_request = url_request.Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with url_request.urlopen(http_request, timeout=10) as response:
+            if 200 <= response.status < 300:
+                return True, ""
+            return False, "Email provider rejected the message."
+    except (HTTPError, URLError, TimeoutError) as exc:
+        return False, f"Email provider error: {exc}"
 
 
 def current_user():
@@ -262,7 +299,12 @@ def request_otp():
         (email, hash_otp(code), (now + timedelta(minutes=OTP_TTL_MINUTES)).isoformat(), now.isoformat()),
     )
     db.commit()
-    response = {"message": "OTP created. In production, it is sent by email.", "expiresInMinutes": OTP_TTL_MINUTES}
+    if IS_PRODUCTION:
+        sent, error_message = send_otp_email(email, code)
+        if not sent:
+            return json_error(error_message, 503)
+
+    response = {"message": "OTP sent by email.", "expiresInMinutes": OTP_TTL_MINUTES}
     if not IS_PRODUCTION:
         response["developmentCode"] = code
     return jsonify(response)
