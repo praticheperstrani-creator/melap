@@ -4,10 +4,9 @@ import secrets
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from urllib import request as url_request
-from urllib.error import HTTPError, URLError
 import json
 
+import requests
 import stripe
 from flask import Flask, g, jsonify, request, send_from_directory
 
@@ -147,28 +146,24 @@ def send_otp_email(email, code):
             f"<p>Il codice scade tra {OTP_TTL_MINUTES} minuti. Se non hai richiesto l'accesso, ignora questa email.</p>"
         ),
     }).encode("utf-8")
-    http_request = url_request.Request(
-        "https://api.resend.com/emails",
-        data=payload,
-        headers={
-            "Authorization": f"Bearer {RESEND_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "melap/1.0 (+https://melap.it)",
+    }
     try:
-        with url_request.urlopen(http_request, timeout=10) as response:
-            if 200 <= response.status < 300:
-                return True, ""
-            return False, "Email provider rejected the message."
-    except HTTPError as exc:
-        try:
-            provider_body = exc.read().decode("utf-8", errors="replace")[:500]
-        except Exception:
-            provider_body = "unavailable"
-        app.logger.error("Resend email request failed: HTTP %s - %s", exc.code, provider_body)
-        return False, f"Email provider error: HTTP {exc.code}"
-    except (URLError, TimeoutError) as exc:
+        response = requests.post(
+            "https://api.resend.com/emails",
+            data=payload,
+            headers=headers,
+            timeout=10,
+        )
+        if 200 <= response.status_code < 300:
+            return True, ""
+        app.logger.error("Resend email request failed: HTTP %s - %s", response.status_code, response.text[:500])
+        return False, f"Email provider error: HTTP {response.status_code}"
+    except requests.RequestException as exc:
         app.logger.error("Resend email request failed: %s", exc)
         return False, "Email provider unavailable"
 
