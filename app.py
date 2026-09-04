@@ -161,8 +161,16 @@ def send_otp_email(email, code):
             if 200 <= response.status < 300:
                 return True, ""
             return False, "Email provider rejected the message."
-    except (HTTPError, URLError, TimeoutError) as exc:
-        return False, f"Email provider error: {exc}"
+    except HTTPError as exc:
+        try:
+            provider_body = exc.read().decode("utf-8", errors="replace")[:500]
+        except Exception:
+            provider_body = "unavailable"
+        app.logger.error("Resend email request failed: HTTP %s - %s", exc.code, provider_body)
+        return False, f"Email provider error: HTTP {exc.code}"
+    except (URLError, TimeoutError) as exc:
+        app.logger.error("Resend email request failed: %s", exc)
+        return False, "Email provider unavailable"
 
 
 def current_user():
